@@ -1,0 +1,44 @@
+@use "~@fider/assets/styles/variables.scss" as *;
+
+.c-vote-counter {
+  &__button {
+    font-size: get("font.size.lg");
+    // border: none;
+    width: sizing(12);
+    height: sizing(12);
+    cursor: pointer;
+    // background-color: transparent;
+    text-align: center;
+    margin: 0 auto;
+    padding: 3px 0 8px 0;
+    color: var(--colors-gray-700);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    svg {
+      color: var(--colors-gray-700);
+      margin-bottom: -2px;
+    }
+
+    &--voted {
+      justify-content: center;
+      padding: 0;
+      font-weight: get("font.weight.bold");
+    }
+
+    &--voted,
+    &:hover {
+      color: var(--colors-primary-base);
+      svg {
+        color: var(--colors-primary-base);
+      }
+    }
+
+    &--disabled {
+      justify-content: center;
+      padding: 0;
+      @include disabled();
+    }
+  }
+}

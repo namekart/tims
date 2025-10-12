@@ -1,0 +1,28 @@
+services:
+  db:
+    restart: always
+    image: postgres:17
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: fider
+      POSTGRES_PASSWORD: s0m3g00dp4ssw0rd
+
+  app:
+    restart: always
+    build: .
+    image: fider-custom:latest
+    depends_on:
+      - db
+    ports:
+      - "0.0.0.0:8081:3000"
+    environment:
+      BASE_URL: https://fider.namekart.com
+      DATABASE_URL: postgres://fider:s0m3g00dp4ssw0rd@db:5432/fider?sslmode=disable
+      JWT_SECRET: VERY_STRONG_SECRET_SHOULD_BE_USED_HERE
+      EMAIL_NOREPLY: fider@namekart.com
+      EMAIL_SMTP_HOST: smtp.office365.com
+      EMAIL_SMTP_PORT: 587
+      EMAIL_SMTP_USERNAME: noreply@namekart.com
+      EMAIL_SMTP_PASSWORD: T0910@1959
+      EMAIL_SMTP_ENABLE_STARTTLS: 'true'

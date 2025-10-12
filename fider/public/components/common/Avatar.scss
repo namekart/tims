@@ -1,0 +1,7 @@
+@use "~@fider/assets/styles/variables.scss" as *;
+
+.c-avatar {
+  border-radius: 50%;
+  vertical-align: middle;
+  display: inline-block;
+}
