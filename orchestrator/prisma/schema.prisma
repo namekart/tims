@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Mapping between Fider posts and Plane issues
+model Mapping {
+  id              String   @id @default(uuid())
+  fiderPostNumber Int      @unique
+  fiderPostUrl    String
+  fiderPostTitle  String
+  planeIssueId    String   @unique
+  planeIssueUrl   String
+  planeProjectId  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([fiderPostNumber])
+  @@index([planeIssueId])
+}
+
+// Project mapping for product tags
+model ProjectMapping {
+  id             String   @id @default(uuid())
+  productTag     String   @unique  // e.g., "product_name"
+  planeProjectId String
+  projectName    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([productTag])
+}
+
+// Webhook event log for debugging
+model WebhookLog {
+  id        String   @id @default(uuid())
+  source    String   // "fider" or "plane"
+  eventType String
+  payload   String   // JSON string
+  status    String   // "success" | "failed" | "processing"
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+  @@index([status])
+}

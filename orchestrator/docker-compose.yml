@@ -1,0 +1,40 @@
+services:
+  orchestrator:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - orchestrator_db:/app/prisma
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+
+      # Fider Configuration
+      FIDER_BASE_URL: http://fider-app-1:3000
+      FIDER_API_KEY: tVkEQCktzCrOlAjhUmiGQZnVp0ro3nFxsrCi3PzxoLTuRXKoD6XRjsvmwOZ24eTJ
+
+      # Plane Configuration
+      PLANE_BASE_URL: http://plane-app-proxy-1
+      PLANE_API_KEY: plane_api_b96cd80f08ff4d0b9d22d7ad0a261856
+      PLANE_WEBHOOK_KEY: plane_wh_68796f7566bc46d39e55a14116c85096
+      WEBHOOK_SECRET: plane_wh_68796f7566bc46d39e55a14116c85096
+      PLANE_WORKSPACE_SLUG: namekart
+      PLANE_PROJECT_ID: b5a20847-714b-4c87-b85d-bb85df44d29e
+
+    # Connect to Fider and Plane networks
+    networks:
+      - fider_default
+      - plane-app_default
+
+    restart: unless-stopped
+
+networks:
+  fider_default:
+    external: true
+  plane-app_default:
+    external: true
+
+
+volumes:
+  orchestrator_db:
+    name: orchestrator_db
