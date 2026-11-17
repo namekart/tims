@@ -2,8 +2,12 @@ package httpclient
 
 import (
 	"context"
+	"errors"
 	"io"
+	"net"
 	"net/http"
+	"net/netip"
+	"syscall"
 	"time"
 
 	"github.com/getfider/fider/app/models/cmd"
@@ -19,6 +23,58 @@ func init() {
 		},
 	}
 	bus.Register(Service{})
+}
+
+// Internal ranges that netip still reports as global unicast.
+var nonPublicPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),     // this host
+	netip.MustParsePrefix("100.64.0.0/10"), // shared address space: carrier NAT, VPN overlays, metadata endpoints
+	netip.MustParsePrefix("192.0.0.0/24"),  // protocol assignments, includes metadata endpoints
+	// IPv6 translation and tunnel prefixes that embed an IPv4 address, such as 10.0.0.1 or 127.0.0.1
+	netip.MustParsePrefix("64:ff9b::/96"),
+	netip.MustParsePrefix("64:ff9b:1::/48"),
+	netip.MustParsePrefix("2001::/32"),
+	netip.MustParsePrefix("2002::/16"),
+}
+
+// dialPublicOnly runs after DNS resolution, on the address the client is about to connect to.
+func dialPublicOnly(_, address string, _ syscall.RawConn) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return err
+	}
+	ip = ip.Unmap()
+	if !ip.IsGlobalUnicast() || ip.IsPrivate() {
+		return errors.New("destination not allowed")
+	}
+	for _, p := range nonPublicPrefixes {
+		if p.Contains(ip) {
+			return errors.New("destination not allowed")
+		}
+	}
+	return nil
+}
+
+// No Proxy field: behind a proxy the dialer would only see the proxy's address.
+var publicOnlyTransport = &http.Transport{
+	DialContext:           (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second, Control: dialPublicOnly}).DialContext,
+	ForceAttemptHTTP2:     true,
+	MaxIdleConns:          100,
+	IdleConnTimeout:       90 * time.Second,
+	TLSHandshakeTimeout:   10 * time.Second,
+	ExpectContinueTimeout: 1 * time.Second,
+}
+
+var publicOnlyClient = &http.Client{
+	Transport: publicOnlyTransport,
+	Timeout:   30 * time.Second,
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
 }
 
 type Service struct{}
@@ -53,7 +109,7 @@ func requestHandler(ctx context.Context, c *cmd.HTTPRequest) error {
 		req.SetBasicAuth(c.BasicAuth.User, c.BasicAuth.Password)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := publicOnlyClient.Do(req)
 	if err != nil {
 		return err
 	}
